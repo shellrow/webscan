@@ -1,0 +1,17 @@
+[package]
+name = "webscan"
+version = "0.0.1"
+authors = ["shellrow <81893184+shellrow@users.noreply.github.com>"]
+edition = "2018"
+description = "Cross-platform web scan library"
+repository = "https://github.com/shellrow/webscan"
+readme = "README.md"
+keywords = ["web","security","scan"]
+categories = ["network-programming"]
+license = "MIT"
+
+[dependencies]
+futures = "0.3"
+tokio = {version = "0.2", features = ["time"] }
+serde = { version = "1.0", features = ["derive"] }
+reqwest = "0.10"
