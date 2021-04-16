@@ -3,7 +3,12 @@ use futures::{stream, StreamExt};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>) -> HashMap<String, String> {
+pub enum RequestMethod {
+    Get,
+    Post,
+}
+
+pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod) -> HashMap<String, String> {
     let mut result = HashMap::new();
     let scan_results: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let client = Client::new();
@@ -14,9 +19,23 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>) -> HashMap<Str
     let results = stream::iter(target_uris).map(|uri| {
         let client = &client;
         async move {
+            match req_method {
+                RequestMethod::Get => {
+                    let resp = client.get(&uri).send().await.unwrap();
+                    let stat = resp.status();
+                    (uri, stat.to_string())
+                },
+                RequestMethod::Post => {
+                    let resp = client.post(&uri).send().await.unwrap();
+                    let stat = resp.status();
+                    (uri, stat.to_string())
+                },
+            }
+            /*
             let resp = client.get(&uri).send().await.unwrap();
             let stat = resp.status();
             (uri, stat.to_string())
+            */
         }
     }).buffer_unordered(100);
 

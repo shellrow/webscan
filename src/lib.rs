@@ -8,6 +8,8 @@ use tokio::time::{timeout};
 
 pub use status::ScanStatus;
 
+pub use uri::RequestMethod;
+
 /// Result of UriScanner::new
 pub type NewUriScannerResult = Result<UriScanner, String>;
 
@@ -22,6 +24,8 @@ pub struct UriScanner {
     base_uri: String,
     /// Word-list of files or directories
     word_list: Vec<String>,
+    /// Request Method
+    request_method: RequestMethod,
     /// Timeout setting of uri scan.  
     timeout: Duration,
     /// Result of uri scan.  
@@ -79,6 +83,7 @@ impl UriScanner{
         let uri_scanner = UriScanner{
             base_uri: String::new(),
             word_list: vec![],
+            request_method: RequestMethod::Get,
             timeout: Duration::from_millis(30000),
             scan_result: ini_scan_result,
         };
@@ -92,6 +97,10 @@ impl UriScanner{
     pub fn add_word(&mut self, word: String) {
         self.word_list.push(word);
     }
+    /// Set request method
+    pub fn set_request_method(&mut self, method: RequestMethod) {
+        self.request_method = method;
+    }
     /// Set scan timeout  
     pub fn set_timeout(&mut self, timeout: Duration){
         self.timeout = timeout;
@@ -101,7 +110,7 @@ impl UriScanner{
     /// Results are stored in UriScanner::scan_result
     pub async fn run_scan(&mut self){
         let start_time = Instant::now();
-        let res = timeout(self.timeout, uri::scan_uri(&self.base_uri, &self.word_list)).await;
+        let res = timeout(self.timeout, uri::scan_uri(&self.base_uri, &self.word_list, &self.request_method)).await;
         match res {
             Ok(responses) => {
                 self.scan_result.responses = responses;
