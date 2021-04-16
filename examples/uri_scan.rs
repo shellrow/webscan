@@ -12,7 +12,7 @@ async fn main(){
     };
     let base_uri = String::from("http://192.168.1.18/xvwa/");
     uri_scanner.set_base_uri(base_uri);
-    let data = read_to_string("/Users/shred/Desktop/dataset/common.txt");
+    let data = read_to_string("common.txt");
     let text = match data {
         Ok(content) => content,
         Err(e) => {panic!("Could not open or find file: {}", e);}
