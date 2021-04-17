@@ -3,6 +3,7 @@ use futures::{stream, StreamExt};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+/// HTTP request method for scanning
 pub enum RequestMethod {
     Get,
     Post,
@@ -31,11 +32,6 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
                     (uri, stat.to_string())
                 },
             }
-            /*
-            let resp = client.get(&uri).send().await.unwrap();
-            let stat = resp.status();
-            (uri, stat.to_string())
-            */
         }
     }).buffer_unordered(100);
 
