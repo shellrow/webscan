@@ -28,6 +28,8 @@ pub struct UriScanner {
     request_method: RequestMethod,
     /// Timeout setting of uri scan.  
     timeout: Duration,
+    /// Accept invalid certs
+    accept_invalid_certs: bool,
     /// Result of uri scan.  
     scan_result: UriScanResult,
 }
@@ -83,8 +85,9 @@ impl UriScanner{
         let uri_scanner = UriScanner{
             base_uri: String::new(),
             word_list: vec![],
-            request_method: RequestMethod::Get,
+            request_method: RequestMethod::Head,
             timeout: Duration::from_millis(30000),
+            accept_invalid_certs: false,
             scan_result: ini_scan_result,
         };
         Ok(uri_scanner)
@@ -105,12 +108,16 @@ impl UriScanner{
     pub fn set_timeout(&mut self, timeout: Duration){
         self.timeout = timeout;
     }
+    /// Set option to accept invalid certificates
+    pub fn set_accept_invalid_certs(&mut self, accept: bool) {
+        self.accept_invalid_certs = accept;
+    }
     /// Run scan with current settings. 
     /// 
     /// Results are stored in UriScanner::scan_result
     pub async fn run_scan(&mut self){
         let start_time = Instant::now();
-        let res = timeout(self.timeout, uri::scan_uri(&self.base_uri, &self.word_list, &self.request_method)).await;
+        let res = timeout(self.timeout, uri::scan_uri(&self.base_uri, &self.word_list, &self.request_method, self.accept_invalid_certs)).await;
         match res {
             Ok(responses) => {
                 self.scan_result.responses = responses;

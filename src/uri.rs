@@ -7,12 +7,17 @@ use std::sync::{Arc, Mutex};
 pub enum RequestMethod {
     Get,
     Post,
+    Head,
 }
 
-pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod) -> HashMap<String, String> {
+pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod, accept_invalid_certs: bool) -> HashMap<String, String> {
     let mut result = HashMap::new();
     let scan_results: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
-    let client = Client::new();
+    let client = if accept_invalid_certs {
+        Client::builder().danger_accept_invalid_certs(true).build().unwrap()
+    }else {
+        Client::new()
+    };
     let mut target_uris: Vec<String> = Vec::new();
     for w in word_list{
         target_uris.push(format!("{}{}", base_uri, w));
@@ -20,18 +25,13 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
     let results = stream::iter(target_uris).map(|uri| {
         let client = &client;
         async move {
-            match req_method {
-                RequestMethod::Get => {
-                    let resp = client.get(&uri).send().await.unwrap();
-                    let stat = resp.status();
-                    (uri, stat.to_string())
-                },
-                RequestMethod::Post => {
-                    let resp = client.post(&uri).send().await.unwrap();
-                    let stat = resp.status();
-                    (uri, stat.to_string())
-                },
-            }
+            let resp = match req_method {
+                RequestMethod::Head => client.head(&uri).send().await.unwrap(),
+                RequestMethod::Post => client.post(&uri).send().await.unwrap(),
+                RequestMethod::Get => client.get(&uri).send().await.unwrap(),
+            };
+            let stat = resp.status();
+            (uri, stat.to_string())
         }
     }).buffer_unordered(100);
 

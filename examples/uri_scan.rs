@@ -10,7 +10,7 @@ async fn main(){
         Ok(scanner) => (scanner),
         Err(e) => panic!("Error creating scanner: {}", e),
     };
-    let base_uri = String::from("http://192.168.1.18/xvwa/");
+    let base_uri = String::from("http://192.168.1.8/xvwa/");
     uri_scanner.set_base_uri(base_uri);
     let data = read_to_string("common.txt");
     let text = match data {
@@ -21,8 +21,9 @@ async fn main(){
     for word in word_list {
         uri_scanner.add_word(word.to_string());
     }
-    uri_scanner.set_request_method(RequestMethod::Get);
-    uri_scanner.set_timeout(Duration::from_millis(10000));
+    uri_scanner.set_request_method(RequestMethod::Head);
+    uri_scanner.set_timeout(Duration::from_millis(20000));
+    uri_scanner.set_accept_invalid_certs(false);
     uri_scanner.run_scan().await;
     let result = uri_scanner.get_result();
     print!("Status: ");
