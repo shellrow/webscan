@@ -10,7 +10,16 @@ pub enum RequestMethod {
     Head,
 }
 
-pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod, accept_invalid_certs: bool) -> HashMap<String, String> {
+fn content_contains(content: &[u8], elem: &[u8]) -> bool {
+    if elem.len() == 0 { return false }
+    match content.windows(elem.len())
+        .position(|w| w == elem) {
+            Some(_) => true,
+            None => false
+        }
+}
+
+pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod, accept_invalid_certs: bool, content_list: &Vec<Vec<u8>>) -> HashMap<String, String> {
     let mut result = HashMap::new();
     let scan_results: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
     let client = if accept_invalid_certs {
@@ -30,8 +39,14 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
                 RequestMethod::Post => client.post(&uri).send().await.unwrap(),
                 RequestMethod::Get => client.get(&uri).send().await.unwrap(),
             };
-            let stat = resp.status();
-            (uri, stat.to_string())
+            let stat = if content_list.len() == 0 { resp.status().to_string() } else {
+                let content = &resp.bytes().await.unwrap();
+                match content_list.iter().find(|&elem| content_contains(&content,&elem)) {
+                    Some(_) => "200 Found".to_owned(), // do not lose if matched but 404
+                    None => "404 Not Found".to_owned()
+                }
+            };
+            (uri, stat)
         }
     }).buffer_unordered(100);
 
