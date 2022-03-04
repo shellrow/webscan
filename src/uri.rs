@@ -31,6 +31,9 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
     for w in word_list{
         target_uris.push(format!("{}{}", base_uri, w));
     }
+    if target_uris.len() == 0 {
+        target_uris.push(base_uri.to_owned());
+    }
     let results = stream::iter(target_uris).map(|uri| {
         let client = &client;
         async move {
