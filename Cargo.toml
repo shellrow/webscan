@@ -16,6 +16,15 @@ futures = "0.3"
 reqwest = "0.10"
 dns-lookup = "0.9"
 tokio = {version = "0.2", features = ["time"] }
+## Static build
+# Add openssl-sys as a direct dependency so it can be cross compiled to
+# x86_64-unknown-linux-musl using the "vendored" feature below
+openssl-sys = "*"
+
+[features]
+# Force openssl-sys to staticly link in the openssl library.
+# Necessary when cross compiling to x86_64-unknown-linux-musl.
+vendored = ["openssl-sys/vendored"]
 
 [dev-dependencies]
 tokio = { version = "0.2", features = ["full"] }
