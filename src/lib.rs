@@ -18,7 +18,8 @@ pub type NewDomainScannerResult = Result<DomainScanner, String>;
 
 /// Structure for uri scan  
 /// 
-/// Should be constructed using UriScanner::new 
+/// Should be constructed using UriScanner::new
+#[derive(Clone)]
 pub struct UriScanner {
     /// Base URI of scan target.  
     base_uri: String,
@@ -32,11 +33,14 @@ pub struct UriScanner {
     accept_invalid_certs: bool,
     /// Result of uri scan.  
     scan_result: UriScanResult,
+    /// List of content buffers to find in returned pages
+    content_list: Vec<Vec<u8>>,
 }
 
 /// Structure for domain scan  
 /// 
-/// Should be constructed using DomainScanner::new 
+/// Should be constructed using DomainScanner::new
+#[derive(Clone)]
 pub struct DomainScanner {
     /// Base Domain Name of scan target.  
     base_domain: String,
@@ -89,6 +93,7 @@ impl UriScanner{
             timeout: Duration::from_millis(30000),
             accept_invalid_certs: false,
             scan_result: ini_scan_result,
+            content_list: vec![],
         };
         Ok(uri_scanner)
     }
@@ -98,7 +103,7 @@ impl UriScanner{
     }
     /// Add word(file name or dir name) to word-list
     pub fn add_word(&mut self, word: String) {
-        self.word_list.push(word);
+        if word.len() != 0 { self.word_list.push(word) }
     }
     /// Set request method
     pub fn set_request_method(&mut self, method: RequestMethod) {
@@ -112,12 +117,16 @@ impl UriScanner{
     pub fn set_accept_invalid_certs(&mut self, accept: bool) {
         self.accept_invalid_certs = accept;
     }
+    /// Add content vector to search for in response bytes
+    pub fn add_content(&mut self, content: Vec<u8>) {
+        if content.len() != 0 { self.content_list.push(content) }
+    }
     /// Run scan with current settings. 
     /// 
     /// Results are stored in UriScanner::scan_result
     pub async fn run_scan(&mut self){
         let start_time = Instant::now();
-        let res = timeout(self.timeout, uri::scan_uri(&self.base_uri, &self.word_list, &self.request_method, self.accept_invalid_certs)).await;
+        let res = timeout(self.timeout, uri::scan_uri(&self.base_uri, &self.word_list, &self.request_method, self.accept_invalid_certs, &self.content_list)).await;
         match res {
             Ok(responses) => {
                 self.scan_result.responses = responses;
