@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// HTTP request method for scanning
+#[derive(Clone)]
 pub enum RequestMethod {
     Get,
     Post,

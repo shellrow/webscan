@@ -18,7 +18,8 @@ pub type NewDomainScannerResult = Result<DomainScanner, String>;
 
 /// Structure for uri scan  
 /// 
-/// Should be constructed using UriScanner::new 
+/// Should be constructed using UriScanner::new
+#[derive(Clone)]
 pub struct UriScanner {
     /// Base URI of scan target.  
     base_uri: String,
@@ -38,7 +39,8 @@ pub struct UriScanner {
 
 /// Structure for domain scan  
 /// 
-/// Should be constructed using DomainScanner::new 
+/// Should be constructed using DomainScanner::new
+#[derive(Clone)]
 pub struct DomainScanner {
     /// Base Domain Name of scan target.  
     base_domain: String,
