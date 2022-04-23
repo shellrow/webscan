@@ -21,7 +21,7 @@ tokio = {version = "0.2", features = ["time"] }
 # Add openssl-sys as a direct dependency so it can be cross compiled to
 # x86_64-unknown-linux-musl using the "vendored" feature below
 [target.'cfg(not(windows))'.dependencies]
-openssl-sys = "*"
+openssl-sys = "0.9"
 
 [target.'cfg(linux)'.dependencies]
 [features]
