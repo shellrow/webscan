@@ -2,9 +2,10 @@ use futures::{stream, StreamExt};
 use dns_lookup::lookup_host;
 use std::net::IpAddr;
 use std::collections::HashMap;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
-pub async fn scan_domain(base_domain: &String, word_list: &Vec<String>) -> HashMap<String, Vec<String>> {
+pub async fn scan_domain(base_domain: &String, word_list: &Vec<String>, ptx: &Arc<Mutex<Sender<String>>>) -> HashMap<String, Vec<String>> {
     let mut result = HashMap::new();
     let scan_results: Arc<Mutex<HashMap<String, Vec<String>>>> = Arc::new(Mutex::new(HashMap::new()));
     let mut target_domain: Vec<String> = Vec::new();
@@ -30,6 +31,15 @@ pub async fn scan_domain(base_domain: &String, word_list: &Vec<String>) -> HashM
                 Err(_) => {
 
                 }
+            }
+            match ptx.lock() {
+                Ok(lr) => {
+                    match lr.send(domain.clone()) {
+                        Ok(_) => {},
+                        Err(_) => {},
+                    }
+                },
+                Err(_) => {},
             }
             (domain, ip_list)
         }

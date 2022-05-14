@@ -2,8 +2,10 @@ extern crate webscan;
 use webscan::DomainScanner;
 use webscan::ScanStatus;
 use tokio;
+use tokio::runtime::Runtime;
 use std::fs::read_to_string;
 use std::time::Duration;
+use std::thread;
 
 #[tokio::main]
 async fn main(){
@@ -23,11 +25,22 @@ async fn main(){
         domain_scanner.add_word(d.to_string());
     }
     domain_scanner.set_timeout(Duration::from_millis(10000));
-    domain_scanner.run_scan().await;
-    let result = domain_scanner.get_result();
+    let rx = domain_scanner.get_progress_receiver();
+    let rt = Runtime::new().unwrap();
+    // Run scan 
+    let handle = thread::spawn(move|| {
+        rt.block_on(async {
+            domain_scanner.scan().await
+        })
+    });
+    // Print progress
+    while let Ok(_domain) = rx.lock().unwrap().recv() {
+        //println!("Check: {}", domain);
+    }
+    let result = handle.join().unwrap();
     print!("Status: ");
     match result.scan_status {
-        ScanStatus::Done => {println!("Normal end")},
+        ScanStatus::Done => {println!("Done")},
         ScanStatus::Timeout => {println!("Timed out")},
         _ => {println!("Error")},
     }

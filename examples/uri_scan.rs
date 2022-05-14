@@ -1,8 +1,10 @@
 extern crate webscan;
 use webscan::{UriScanner, ScanStatus, RequestMethod};
 use tokio;
+use tokio::runtime::Runtime;
 use std::fs::{read_to_string, read};
 use std::time::Duration;
+use std::thread;
 
 #[tokio::main]
 async fn main(){
@@ -32,11 +34,22 @@ async fn main(){
     uri_scanner.set_request_method(RequestMethod::Get);
     uri_scanner.set_timeout(Duration::from_millis(20000));
     uri_scanner.set_accept_invalid_certs(false);
-    uri_scanner.run_scan().await;
-    let result = uri_scanner.get_result();
+    let rx = uri_scanner.get_progress_receiver();
+    let rt = Runtime::new().unwrap();
+    // Run scan 
+    let handle = thread::spawn(move|| {
+        rt.block_on(async {
+            uri_scanner.scan().await
+        })
+    });
+    // Print progress
+    while let Ok(_uri) = rx.lock().unwrap().recv() {
+        //println!("Check: {}", uri);
+    }
+    let result = handle.join().unwrap();
     print!("Status: ");
     match result.scan_status {
-        ScanStatus::Done => {println!("Normal end")},
+        ScanStatus::Done => {println!("Done")},
         ScanStatus::Timeout => {println!("Timed out")},
         _ => {println!("Error")},
     }

@@ -2,6 +2,7 @@ use reqwest::Client;
 use futures::{stream, StreamExt};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Sender;
 use crate::http::{RequestMethod, ResponseStatus};
 
 fn content_contains(content: &[u8], elem: &[u8]) -> bool {
@@ -13,7 +14,7 @@ fn content_contains(content: &[u8], elem: &[u8]) -> bool {
         }
 }
 
-pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod, accept_invalid_certs: bool, content_list: &Vec<Vec<u8>>) -> HashMap<String, ResponseStatus> {
+pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod, accept_invalid_certs: bool, content_list: &Vec<Vec<u8>>, ptx: &Arc<Mutex<Sender<String>>>) -> HashMap<String, ResponseStatus> {
     let mut result: HashMap<String, ResponseStatus> = HashMap::new();
     let scan_results: Arc<Mutex<HashMap<String, ResponseStatus>>> = Arc::new(Mutex::new(HashMap::new()));
     let client = if accept_invalid_certs {
@@ -36,7 +37,7 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
                 RequestMethod::Post => client.post(&uri).send(),
                 RequestMethod::Get => client.get(&uri).send(),
             };
-            match req.await {
+            let r = match req.await {
                 Ok(resp) => {
                     let stat = if content_list.len() == 0 {
                         ResponseStatus::from_code(resp.status().as_u16()) 
@@ -47,12 +48,22 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
                             None => ResponseStatus::from_code(404)
                         }
                     };
-                    (uri, stat)
+                    (uri.clone(), stat)
                 },
                 Err(_) => {
-                    (uri, ResponseStatus::from_code(404))
+                    (uri.clone(), ResponseStatus::from_code(404))
                 }
+            };
+            match ptx.lock() {
+                Ok(lr) => {
+                    match lr.send(uri) {
+                        Ok(_) => {},
+                        Err(_) => {},
+                    }
+                },
+                Err(_) => {},
             }
+            r
         }
     }).buffer_unordered(100);
 

@@ -5,6 +5,8 @@ mod status;
 
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
+use std::sync::{Mutex, Arc};
+use std::sync::mpsc::{channel ,Sender, Receiver};
 use tokio::time::{timeout};
 
 pub use status::ScanStatus;
@@ -29,6 +31,10 @@ pub struct UriScanner {
     scan_result: UriScanResult,
     /// List of content buffers to find in returned pages
     content_list: Vec<Vec<u8>>,
+    /// Sender for progress messaging
+    tx: Arc<Mutex<Sender<String>>>,
+    /// Receiver for progress messaging
+    rx: Arc<Mutex<Receiver<String>>>,
 }
 
 /// Structure for domain scan  
@@ -44,6 +50,10 @@ pub struct DomainScanner {
     timeout: Duration,
     /// Result of domain scan.  
     scan_result: DomainScanResult,
+    /// Sender for progress messaging
+    tx: Arc<Mutex<Sender<String>>>,
+    /// Receiver for progress messaging
+    rx: Arc<Mutex<Receiver<String>>>,
 }
 
 /// Result of UriScanner::run_scan  
@@ -80,6 +90,7 @@ impl UriScanner{
             scan_time: Duration::from_millis(0),
             scan_status: ScanStatus::Ready,
         };
+        let (tx, rx) = channel();
         let uri_scanner = UriScanner{
             base_uri: String::new(),
             word_list: vec![],
@@ -88,6 +99,8 @@ impl UriScanner{
             accept_invalid_certs: false,
             scan_result: ini_scan_result,
             content_list: vec![],
+            tx: Arc::new(Mutex::new(tx)),
+            rx: Arc::new(Mutex::new(rx)),
         };
         Ok(uri_scanner)
     }
@@ -120,7 +133,7 @@ impl UriScanner{
     /// Results are stored in UriScanner::scan_result
     pub async fn run_scan(&mut self){
         let start_time = Instant::now();
-        let res = timeout(self.timeout, uri::scan_uri(&self.base_uri, &self.word_list, &self.request_method, self.accept_invalid_certs, &self.content_list)).await;
+        let res = timeout(self.timeout, uri::scan_uri(&self.base_uri, &self.word_list, &self.request_method, self.accept_invalid_certs, &self.content_list, &self.tx)).await;
         match res {
             Ok(responses) => {
                 self.scan_result.responses = responses;
@@ -137,6 +150,15 @@ impl UriScanner{
     pub fn get_result(&mut self) -> UriScanResult{
         return self.scan_result.clone();
     }
+    /// Run scan and return result
+    pub async fn scan(&mut self) -> UriScanResult {
+        self.run_scan().await;
+        self.scan_result.clone()
+    }
+    /// Get progress receiver
+    pub fn get_progress_receiver(&self) -> Arc<Mutex<Receiver<String>>> {
+        self.rx.clone()
+    }
 }
 
 impl DomainScanner {
@@ -147,11 +169,14 @@ impl DomainScanner {
             scan_time: Duration::from_millis(0),
             scan_status: ScanStatus::Ready,
         };
+        let (tx, rx) = channel();
         let domain_scanner = DomainScanner {
             base_domain: String::new(),
             word_list: vec![],
             timeout: Duration::from_millis(30000),
             scan_result: ini_scan_result,
+            tx: Arc::new(Mutex::new(tx)),
+            rx: Arc::new(Mutex::new(rx)),
         };
         Ok(domain_scanner)
     }
@@ -172,7 +197,7 @@ impl DomainScanner {
     /// Results are stored in DomainScanner::scan_result
     pub async fn run_scan(&mut self){
         let start_time = Instant::now();
-        let res = timeout(self.timeout, domain::scan_domain(&self.base_domain, &self.word_list)).await;
+        let res = timeout(self.timeout, domain::scan_domain(&self.base_domain, &self.word_list, &self.tx)).await;
         match res {
             Ok(domain_map) => {
                 self.scan_result.domain_map = domain_map;
@@ -188,5 +213,14 @@ impl DomainScanner {
     /// Return scan result.
     pub fn get_result(&mut self) -> DomainScanResult{
         return self.scan_result.clone();
+    }
+    /// Run scan and return result
+    pub async fn scan(&mut self) -> DomainScanResult {
+        self.run_scan().await;
+        self.scan_result.clone()
+    }
+    /// Get progress receiver
+    pub fn get_progress_receiver(&self) -> Arc<Mutex<Receiver<String>>> {
+        self.rx.clone()
     }
 }
