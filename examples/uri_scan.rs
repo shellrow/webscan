@@ -42,7 +42,7 @@ async fn main(){
     }
     println!("URI Scan Result:");
     for (uri, status) in result.responses {
-        println!("{} {}", uri, status);
+        println!("{} {} {}", uri, status.code(), status.reason());
     }
     println!("Scan Time: {:?}", result.scan_time);
 }
