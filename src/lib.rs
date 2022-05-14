@@ -7,14 +7,7 @@ use std::collections::HashMap;
 use tokio::time::{timeout};
 
 pub use status::ScanStatus;
-
 pub use uri::RequestMethod;
-
-/// Result of UriScanner::new
-pub type NewUriScannerResult = Result<UriScanner, String>;
-
-/// Result of DomainScanner::new
-pub type NewDomainScannerResult = Result<DomainScanner, String>;
 
 /// Structure for uri scan  
 /// 
@@ -80,10 +73,10 @@ pub struct DomainScanResult {
 
 impl UriScanner{
     /// Construct new UriScanner  
-    pub fn new() -> NewUriScannerResult {
+    pub fn new() -> Result<UriScanner, String> {
         let ini_scan_result = UriScanResult{
             responses: HashMap::new(),
-            scan_time: Duration::from_millis(1),
+            scan_time: Duration::from_millis(0),
             scan_status: ScanStatus::Ready,
         };
         let uri_scanner = UriScanner{
@@ -147,10 +140,10 @@ impl UriScanner{
 
 impl DomainScanner {
     /// Construct new UriScanner  
-    pub fn new() -> NewDomainScannerResult {
+    pub fn new() -> Result<DomainScanner, String> {
         let ini_scan_result = DomainScanResult {
             domain_map: HashMap::new(), 
-            scan_time: Duration::from_millis(1),
+            scan_time: Duration::from_millis(0),
             scan_status: ScanStatus::Ready,
         };
         let domain_scanner = DomainScanner {
