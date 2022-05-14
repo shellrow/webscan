@@ -42,7 +42,7 @@ async fn main(){
                         ScanStatus::Done => {
                             for (uri, status) in result.responses {
                                 // Content matches are "given" a 200 response string
-                                if status.starts_with("2") { println!("{}", uri) }
+                                if status.is_success() { println!("{}", uri) }
                             }
                         },
                         ScanStatus::Timeout => {println!("Timed out")},
