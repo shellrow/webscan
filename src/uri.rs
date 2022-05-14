@@ -2,14 +2,7 @@ use reqwest::Client;
 use futures::{stream, StreamExt};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-
-/// HTTP request method for scanning
-#[derive(Clone)]
-pub enum RequestMethod {
-    Get,
-    Post,
-    Head,
-}
+use crate::http::{RequestMethod, ResponseStatus};
 
 fn content_contains(content: &[u8], elem: &[u8]) -> bool {
     if elem.len() == 0 { return false }
@@ -20,9 +13,9 @@ fn content_contains(content: &[u8], elem: &[u8]) -> bool {
         }
 }
 
-pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod, accept_invalid_certs: bool, content_list: &Vec<Vec<u8>>) -> HashMap<String, String> {
-    let mut result = HashMap::new();
-    let scan_results: Arc<Mutex<HashMap<String, String>>> = Arc::new(Mutex::new(HashMap::new()));
+pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &RequestMethod, accept_invalid_certs: bool, content_list: &Vec<Vec<u8>>) -> HashMap<String, ResponseStatus> {
+    let mut result: HashMap<String, ResponseStatus> = HashMap::new();
+    let scan_results: Arc<Mutex<HashMap<String, ResponseStatus>>> = Arc::new(Mutex::new(HashMap::new()));
     let client = if accept_invalid_certs {
         Client::builder().danger_accept_invalid_certs(true).build().unwrap()
     }else {
@@ -45,18 +38,19 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
             };
             match req.await {
                 Ok(resp) => {
-                    let stat = if content_list.len() == 0 { resp.status().to_string() } else {
+                    let stat = if content_list.len() == 0 {
+                        ResponseStatus::from_code(resp.status().as_u16()) 
+                    } else {
                         let content = &resp.bytes().await.unwrap();
                         match content_list.iter().find(|&elem| content_contains(&content,&elem)) {
-                            Some(_) => "200 Found".to_owned(), // do not lose if matched but 404
-                            None => "404 Not Found".to_owned()
+                            Some(_) => ResponseStatus::from_code(200), // do not lose if matched but 404
+                            None => ResponseStatus::from_code(404)
                         }
                     };
                     (uri, stat)
                 },
-                Err(e) => {
-                    eprintln!("Request failed due to: {}", e);
-                    (uri, "404 Not Found".to_owned())
+                Err(_) => {
+                    (uri, ResponseStatus::from_code(404))
                 }
             }
         }
@@ -65,7 +59,7 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
     results.for_each(|r| async {
         match r {
             (uri, status) => {
-                if status != "404 Not Found" {
+                if status != ResponseStatus::NotFound {
                     scan_results.lock().unwrap().insert(uri, status);
                 }
             },
@@ -73,7 +67,7 @@ pub async fn scan_uri(base_uri: &String, word_list: &Vec<String>, req_method: &R
     }).await;
 
     for (uri, status) in scan_results.lock().unwrap().iter() {
-        result.insert(uri.to_string(), status.to_string());
+        result.insert(uri.to_owned(), status.to_owned());
     }
     return result;
 }

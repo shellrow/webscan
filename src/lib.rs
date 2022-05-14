@@ -1,3 +1,4 @@
+mod http;
 mod uri;
 mod domain;
 mod status;
@@ -7,7 +8,7 @@ use std::collections::HashMap;
 use tokio::time::{timeout};
 
 pub use status::ScanStatus;
-pub use uri::RequestMethod;
+pub use http::{RequestMethod, ResponseStatus};
 
 /// Structure for uri scan  
 /// 
@@ -51,7 +52,7 @@ pub struct UriScanResult {
     /// HashMap of responses. 
     /// 
     /// (URI, Status)
-    pub responses: HashMap<String, String>,
+    pub responses: HashMap<String, ResponseStatus>,
     /// Time from start to end of scan.  
     pub scan_time: Duration,
     /// Scan job status
