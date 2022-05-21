@@ -1,6 +1,6 @@
 [package]
 name = "webscan"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["shellrow <81893184+shellrow@users.noreply.github.com>"]
 edition = "2021"
 description = "Cross-platform web scan library"

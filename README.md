@@ -15,7 +15,7 @@ with the aim of being lightweight and fast.
 Add `webscan` to your dependencies  
 ```toml:Cargo.toml
 [dependencies]
-webscan = "0.3.0"
+webscan = "0.4.0"
 ```
 
 ## Example
